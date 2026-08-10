@@ -1,82 +1,230 @@
 # File: examples/dashboard.yaml
-# Timestamp: 2026-08-10 22:50 CEST
-# Solar Energy Controller 0.1.3 - simulation dashboard
+# Timestamp: 2026-08-10 23:05 CEST
+# Solar Energy Controller 0.1.3
+# COMPLETE Home Assistant dashboard YAML.
+# Paste this into: Dashboard -> Edit -> three-dot menu -> Raw configuration editor.
+# Do NOT paste this into a Manual card.
 
 title: Solar Energy Controller
 views:
-  - title: Simulation
-    path: simulation
+  - title: Controller
+    path: controller
     icon: mdi:solar-power-variant
-    cards:
-      - type: markdown
-        content: |
-          # 🟢 SIMULATION AKTIV
-          **Keine Gerätesteuerung.** Der Controller beobachtet den realen Betrieb und führt parallel einen virtuellen Schattenbetrieb aus.
+    type: sections
+    max_columns: 4
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Solar Energy Controller
+            icon: mdi:solar-power-variant
+          - type: markdown
+            content: |
+              ## 🟢 SIMULATION
+              **Keine Gerätesteuerung aktiv.**
 
-      - type: entities
-        title: Controller
-        show_header_toggle: false
-        entities:
-          - switch.solar_energy_controller_simulation
-          - sensor.solar_energy_controller_recommended_mode
-          - sensor.solar_energy_controller_simulated_battery_soc
-          - sensor.solar_energy_controller_target_battery_soc
-          - sensor.solar_energy_controller_effective_export_price
-          - sensor.solar_energy_controller_mining_break_even_export_price
-          - sensor.solar_energy_controller_future_minimum_epex_price
-          - sensor.solar_energy_controller_future_maximum_epex_price
-
-      - type: glance
-        title: Wirtschaftlichkeit heute
-        columns: 3
-        entities:
-          - entity: sensor.solar_energy_controller_simulated_net_benefit_today
+              Der Controller beobachtet den realen Betrieb und berechnet parallel, wie er PV, Batterie, Einspeisung und Miner wirtschaftlich steuern würde.
+          - type: tile
+            entity: switch.solar_energy_controller_simulation
             name: Simulation
-          - entity: sensor.solar_energy_controller_observed_net_benefit_today
+            icon: mdi:test-tube
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.solar_energy_controller_recommended_mode
+            name: Aktuelle Strategie
+            icon: mdi:state-machine
+            vertical: false
+            features_position: bottom
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Wirtschaftlichkeit heute
+            icon: mdi:currency-eur
+          - type: tile
+            entity: sensor.solar_energy_controller_simulated_net_benefit_today
+            name: Simulation
+            icon: mdi:chart-line
+            color: green
+          - type: tile
+            entity: sensor.solar_energy_controller_observed_net_benefit_today
             name: Ist
-          - entity: sensor.solar_energy_controller_simulation_advantage_today
-            name: Vorteil
+            icon: mdi:home-lightning-bolt
+          - type: tile
+            entity: sensor.solar_energy_controller_simulation_advantage_today
+            name: Vorteil Controller
+            icon: mdi:cash-plus
+            color: green
+          - type: history-graph
+            title: Simulation gegen Ist
+            hours_to_show: 24
+            entities:
+              - entity: sensor.solar_energy_controller_simulated_net_benefit_today
+                name: Simulation
+              - entity: sensor.solar_energy_controller_observed_net_benefit_today
+                name: Ist
 
-      - type: entities
-        title: PV-Prognose für die Entscheidung
-        entities:
-          - entity: sensor.solar_energy_controller_pv_forecast_today
-            name: Heute gesamt
-          - entity: sensor.solar_energy_controller_pv_forecast_remaining_today
+      - type: grid
+        cards:
+          - type: heading
+            heading: Batterie
+            icon: mdi:battery-charging
+          - type: gauge
+            entity: sensor.solax_inverter_battery_1_capacity
+            name: SOC Ist
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 50
+              yellow: 25
+              red: 0
+          - type: gauge
+            entity: sensor.solar_energy_controller_simulated_battery_soc
+            name: SOC Simulation
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 50
+              yellow: 25
+              red: 0
+          - type: tile
+            entity: sensor.solar_energy_controller_target_battery_soc
+            name: Ziel-SOC
+            icon: mdi:battery-clock
+          - type: history-graph
+            title: SOC – Ist gegen Simulation
+            hours_to_show: 24
+            entities:
+              - entity: sensor.solax_inverter_battery_1_capacity
+                name: Ist
+              - entity: sensor.solar_energy_controller_simulated_battery_soc
+                name: Simulation
+              - entity: sensor.solar_energy_controller_target_battery_soc
+                name: Ziel
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Preise & Entscheidung
+            icon: mdi:transmission-tower-export
+          - type: tile
+            entity: sensor.solar_energy_controller_effective_export_price
+            name: Einspeisepreis jetzt
+            icon: mdi:cash-clock
+          - type: tile
+            entity: sensor.solar_energy_controller_mining_break_even_export_price
+            name: Mining Break-even
+            icon: mdi:pickaxe
+          - type: tile
+            entity: sensor.solar_energy_controller_future_minimum_epex_price
+            name: EPEX Minimum
+            icon: mdi:arrow-down-bold
+          - type: tile
+            entity: sensor.solar_energy_controller_future_maximum_epex_price
+            name: EPEX Maximum
+            icon: mdi:arrow-up-bold
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Forecast.Solar
+            icon: mdi:weather-sunny
+          - type: tile
+            entity: sensor.solar_energy_controller_pv_forecast_today
+            name: Heute
+            icon: mdi:solar-power
+          - type: tile
+            entity: sensor.solar_energy_controller_pv_forecast_remaining_today
             name: Rest heute
-          - entity: sensor.solar_energy_controller_pv_forecast_tomorrow
-            name: Morgen gesamt
-          - entity: sensor.solar_energy_controller_pv_forecast_next_hour
+            icon: mdi:weather-sunset
+          - type: tile
+            entity: sensor.solar_energy_controller_pv_forecast_tomorrow
+            name: Morgen
+            icon: mdi:calendar-arrow-right
+          - type: tile
+            entity: sensor.solar_energy_controller_pv_forecast_next_hour
             name: Nächste Stunde
+            icon: mdi:clock-fast
 
-      - type: entities
-        title: Simulierte Energieflüsse
-        entities:
-          - sensor.solar_energy_controller_simulated_export_power
-          - sensor.solar_energy_controller_simulated_import_power
-          - sensor.solar_energy_controller_simulated_battery_charge_power
-          - sensor.solar_energy_controller_simulated_battery_discharge_power
-          - sensor.solar_energy_controller_simulated_export_energy_today
-          - sensor.solar_energy_controller_simulated_import_energy_today
-          - sensor.solar_energy_controller_simulated_export_revenue_today
-          - sensor.solar_energy_controller_simulated_self_consumption_saving_today
+      - type: grid
+        cards:
+          - type: heading
+            heading: Virtueller Energiefluss
+            icon: mdi:transmission-tower
+          - type: tile
+            entity: sensor.solar_energy_controller_simulated_export_power
+            name: Export
+            icon: mdi:transmission-tower-export
+          - type: tile
+            entity: sensor.solar_energy_controller_simulated_import_power
+            name: Import
+            icon: mdi:transmission-tower-import
+          - type: tile
+            entity: sensor.solar_energy_controller_simulated_battery_charge_power
+            name: Batterie laden
+            icon: mdi:battery-arrow-up
+          - type: tile
+            entity: sensor.solar_energy_controller_simulated_battery_discharge_power
+            name: Batterie entladen
+            icon: mdi:battery-arrow-down
+          - type: entities
+            title: Tageswerte
+            show_header_toggle: false
+            entities:
+              - entity: sensor.solar_energy_controller_simulated_export_energy_today
+                name: Exportenergie
+              - entity: sensor.solar_energy_controller_simulated_import_energy_today
+                name: Importenergie
+              - entity: sensor.solar_energy_controller_simulated_export_revenue_today
+                name: Exporterlös
+              - entity: sensor.solar_energy_controller_simulated_self_consumption_saving_today
+                name: Eigenverbrauchsersparnis
 
-      - type: entities
-        title: Mining – DOGE
-        entities:
-          - entity: switch.steckdose_mining
+      - type: grid
+        cards:
+          - type: heading
+            heading: Mining – DOGE
+            icon: mdi:pickaxe
+          - type: tile
+            entity: switch.steckdose_mining
             name: Miner tatsächlich
-          - entity: sensor.steckdose_mining_power
-            name: Miner Leistung
-          - sensor.solar_energy_controller_simulated_miner_runtime_today
-          - sensor.solar_energy_controller_simulated_doge_today
-          - sensor.solar_energy_controller_simulated_mining_value_today
+            icon: mdi:pickaxe
+          - type: tile
+            entity: sensor.steckdose_mining_power
+            name: Leistung tatsächlich
+            icon: mdi:flash
+          - type: tile
+            entity: sensor.solar_energy_controller_simulated_miner_runtime_today
+            name: Laufzeit Simulation
+            icon: mdi:timer-outline
+          - type: tile
+            entity: sensor.solar_energy_controller_simulated_doge_today
+            name: DOGE Simulation
+            icon: mdi:currency-usd
+          - type: tile
+            entity: sensor.solar_energy_controller_simulated_mining_value_today
+            name: Mining-Wert
+            icon: mdi:cash
 
-      - type: history-graph
-        title: Batterie – Ist gegen Simulation
-        hours_to_show: 24
-        entities:
-          - entity: sensor.solax_inverter_battery_1_capacity
-            name: Ist SOC
-          - entity: sensor.solar_energy_controller_simulated_battery_soc
-            name: Simulation SOC
+      - type: grid
+        cards:
+          - type: heading
+            heading: Diagnose
+            icon: mdi:information-outline
+          - type: entities
+            show_header_toggle: false
+            entities:
+              - entity: sensor.solar_energy_controller_recommended_mode
+                name: Empfehlung
+                secondary_info: last-changed
+              - entity: sensor.solax_inverter_pv_power_total
+                name: PV Ist
+              - entity: sensor.solax_inverter_house_load
+                name: Hausverbrauch Ist
+              - entity: sensor.solax_inverter_grid_export
+                name: Export Ist
+              - entity: sensor.solax_inverter_grid_import
+                name: Import Ist

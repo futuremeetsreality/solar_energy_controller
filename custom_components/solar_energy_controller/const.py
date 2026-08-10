@@ -1,10 +1,10 @@
 # File: custom_components/solar_energy_controller/const.py
-# Timestamp: 2026-08-10 22:05 CEST
+# Timestamp: 2026-08-10 22:37 CEST
 
 from __future__ import annotations
 
 DOMAIN = "solar_energy_controller"
-BUILD_VERSION = "0.1.7"
+BUILD_VERSION = "0.1.8"
 PLATFORMS = ["sensor", "switch"]
 
 CONF_PV_POWER = "pv_power_entity"
@@ -58,8 +58,6 @@ DEFAULTS = {
     CONF_GRID_IMPORT_ENERGY_TODAY: "sensor.solax_inverter_today_s_import_energy",
     CONF_BATTERY_SOC: "sensor.solax_inverter_battery_1_capacity",
     CONF_BATTERY_POWER: "sensor.solax_inverter_battery_1_power_charge",
-    # The EPEX Spot Data entity is both the current EPEX state and the source
-    # of the 192 quarter-hour values in attribute "data".
     CONF_EPEX_CURRENT_PRICE: "sensor.epex_spot_data_market_price",
     CONF_EPEX_PRICE: "sensor.epex_spot_data_market_price",
     CONF_EFFECTIVE_EXPORT_PRICE: "",

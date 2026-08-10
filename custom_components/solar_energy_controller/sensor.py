@@ -1,5 +1,5 @@
 # File: custom_components/solar_energy_controller/sensor.py
-# Timestamp: 2026-08-10 22:48 CEST
+# Timestamp: 2026-08-10 23:35 CEST
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any,Callable
@@ -16,6 +16,7 @@ from .coordinator import SolarEnergyControllerCoordinator
 class SECSensorDescription(SensorEntityDescription): value_fn:Callable[[dict[str,Any]],Any]
 SENSORS=(
 SECSensorDescription(key="recommendation",name="Recommended mode",value_fn=lambda d:d.get("recommendation"),icon="mdi:state-machine"),
+SECSensorDescription(key="decision_log",name="Simulation decision log",value_fn=lambda d:d.get("last_decision","No decision yet"),icon="mdi:text-box-search-outline"),
 SECSensorDescription(key="virtual_soc",name="Simulated battery SOC",native_unit_of_measurement=PERCENTAGE,device_class=SensorDeviceClass.BATTERY,state_class=SensorStateClass.MEASUREMENT,value_fn=lambda d:round(d.get("virtual_soc",0),1)),
 SECSensorDescription(key="target_soc",name="Target battery SOC",native_unit_of_measurement=PERCENTAGE,device_class=SensorDeviceClass.BATTERY,state_class=SensorStateClass.MEASUREMENT,value_fn=lambda d:round(d.get("target_soc",0),1)),
 SECSensorDescription(key="sim_export_power",name="Simulated export power",native_unit_of_measurement=UnitOfPower.KILO_WATT,device_class=SensorDeviceClass.POWER,state_class=SensorStateClass.MEASUREMENT,value_fn=lambda d:round(d.get("sim_export_kw",0),3)),
@@ -45,10 +46,12 @@ async def async_setup_entry(hass:HomeAssistant,entry:ConfigEntry,async_add_entit
 class SECSensor(CoordinatorEntity[SolarEnergyControllerCoordinator],SensorEntity):
     _attr_has_entity_name=True
     def __init__(self,c,entry,description):
-        super().__init__(c);self.entity_description=description;self._attr_unique_id=f"{entry.entry_id}_{description.key}";self._attr_device_info=DeviceInfo(identifiers={(DOMAIN,entry.entry_id)},name="Solar Energy Controller",manufacturer="futuremeetsreality",model="Simulation Controller",sw_version="0.1.3")
+        super().__init__(c);self.entity_description=description;self._attr_unique_id=f"{entry.entry_id}_{description.key}";self._attr_device_info=DeviceInfo(identifiers={(DOMAIN,entry.entry_id)},name="Solar Energy Controller",manufacturer="futuremeetsreality",model="Simulation Controller",sw_version="0.1.4")
     @property
     def native_value(self):return self.entity_description.value_fn(self.coordinator.data or {})
     @property
     def extra_state_attributes(self):
-        if self.entity_description.key!="recommendation":return None
-        d=self.coordinator.data or {};return {"reason":d.get("reason"),"target_reason":d.get("target_reason"),"simulation_enabled":d.get("simulation_enabled"),"miner_simulated_on":d.get("miner_simulated_on"),"miner_locked_until":d.get("miner_locked_until"),"future_price_points":d.get("future_price_points"),"forecast_peak_tomorrow":d.get("forecast_peak_tomorrow"),"accumulation_start":d.get("accumulation_start")}
+        d=self.coordinator.data or {}
+        if self.entity_description.key=="recommendation":return {"reason":d.get("reason"),"target_reason":d.get("target_reason"),"simulation_enabled":d.get("simulation_enabled"),"miner_simulated_on":d.get("miner_simulated_on"),"miner_locked_until":d.get("miner_locked_until"),"future_price_points":d.get("future_price_points"),"forecast_peak_tomorrow":d.get("forecast_peak_tomorrow"),"accumulation_start":d.get("accumulation_start")}
+        if self.entity_description.key=="decision_log":return {"entries":d.get("decision_log",[]),"entry_count":d.get("decision_log_count",0),"retention":"192 entries / approx. 48 h at 15 min","latest_reason":d.get("reason")}
+        return None

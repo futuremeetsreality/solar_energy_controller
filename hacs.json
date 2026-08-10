@@ -1,0 +1,6 @@
+{
+  "name": "Solar Energy Controller",
+  "render_readme": true,
+  "domains": ["solar_energy_controller"],
+  "homeassistant": "2026.7.0"
+}

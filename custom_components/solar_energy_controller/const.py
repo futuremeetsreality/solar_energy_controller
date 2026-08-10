@@ -1,5 +1,5 @@
 # File: custom_components/solar_energy_controller/const.py
-# Timestamp: 2026-08-10 20:29 CEST
+# Timestamp: 2026-08-10 22:25 CEST
 
 from __future__ import annotations
 
@@ -20,6 +20,17 @@ CONF_EFFECTIVE_EXPORT_PRICE = "effective_export_price_entity"
 CONF_IMPORT_TOTAL_PRICE = "import_total_price_entity"
 CONF_MINER_SWITCH = "miner_switch_entity"
 CONF_MINER_POWER = "miner_power_entity"
+
+CONF_FORECAST_TODAY_1 = "forecast_today_mppt1_entity"
+CONF_FORECAST_TODAY_2 = "forecast_today_mppt2_entity"
+CONF_FORECAST_REMAINING_1 = "forecast_remaining_today_mppt1_entity"
+CONF_FORECAST_REMAINING_2 = "forecast_remaining_today_mppt2_entity"
+CONF_FORECAST_TOMORROW_1 = "forecast_tomorrow_mppt1_entity"
+CONF_FORECAST_TOMORROW_2 = "forecast_tomorrow_mppt2_entity"
+CONF_FORECAST_NEXT_HOUR_1 = "forecast_next_hour_mppt1_entity"
+CONF_FORECAST_NEXT_HOUR_2 = "forecast_next_hour_mppt2_entity"
+CONF_FORECAST_PEAK_TOMORROW_1 = "forecast_peak_tomorrow_mppt1_entity"
+CONF_FORECAST_PEAK_TOMORROW_2 = "forecast_peak_tomorrow_mppt2_entity"
 
 CONF_BATTERY_CAPACITY_KWH = "battery_capacity_kwh"
 CONF_BATTERY_MIN_SOC = "battery_min_soc"
@@ -50,6 +61,16 @@ DEFAULTS = {
     CONF_IMPORT_TOTAL_PRICE: "",
     CONF_MINER_SWITCH: "switch.steckdose_mining",
     CONF_MINER_POWER: "sensor.steckdose_mining_power",
+    CONF_FORECAST_TODAY_1: "sensor.energy_production_today",
+    CONF_FORECAST_TODAY_2: "sensor.energy_production_today_2",
+    CONF_FORECAST_REMAINING_1: "sensor.energy_production_today_remaining",
+    CONF_FORECAST_REMAINING_2: "sensor.energy_production_today_remaining_2",
+    CONF_FORECAST_TOMORROW_1: "sensor.energy_production_tomorrow",
+    CONF_FORECAST_TOMORROW_2: "sensor.energy_production_tomorrow_2",
+    CONF_FORECAST_NEXT_HOUR_1: "sensor.energy_next_hour",
+    CONF_FORECAST_NEXT_HOUR_2: "sensor.energy_next_hour_2",
+    CONF_FORECAST_PEAK_TOMORROW_1: "sensor.power_highest_peak_time_tomorrow",
+    CONF_FORECAST_PEAK_TOMORROW_2: "sensor.power_highest_peak_time_tomorrow_2",
     CONF_BATTERY_CAPACITY_KWH: 12.5,
     CONF_BATTERY_MIN_SOC: 25.0,
     CONF_BATTERY_MAX_CHARGE_KW: 8.0,

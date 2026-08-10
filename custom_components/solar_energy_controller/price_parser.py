@@ -1,5 +1,5 @@
 # File: custom_components/solar_energy_controller/price_parser.py
-# Timestamp: 2026-08-10 21:55 CEST
+# Timestamp: 2026-08-10 21:10 CEST
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def _parse_time(value: Any) -> datetime | None:
     elif isinstance(value, (int, float)):
         try:
             stamp = float(value)
-            if stamp > 10_000_000_000:
+            if stamp > 10_000_000_000:  # milliseconds since epoch
                 stamp /= 1000.0
             dt = datetime.fromtimestamp(stamp, tz=dt_util.UTC)
         except (ValueError, OSError, OverflowError):
@@ -58,49 +58,37 @@ def _as_float(value: Any) -> float | None:
         return None
 
 
-def _is_eur_per_kwh(unit: Any) -> bool:
-    normalized = str(unit or "").lower().replace(" ", "")
-    return "€/kwh" in normalized or "eur/kwh" in normalized
-
-
 def extract_price_series(attributes: dict[str, Any]) -> list[tuple[datetime, float]]:
-    """Extract EPEX timestamp/price pairs and normalize them to ct/kWh.
+    """Extract timestamp/price pairs from common EPEX attribute layouts.
 
-    The user's EPEX Spot Data sensor exposes 192 quarter-hour values in the
-    ``data`` attribute as ``start_time`` + ``price_per_kwh``. The values are
-    expressed in EUR/kWh, e.g. 0.1771 EUR/kWh = 17.71 ct/kWh.
+    The source entity in the reference installation contains today + tomorrow
+    quarter-hour values. Prices are kept in their source unit; the controller
+    expects ct/kWh for this EPEX entity.
     """
     results: list[tuple[datetime, float]] = []
-    source_is_eur = _is_eur_per_kwh(attributes.get("unit_of_measurement"))
 
-    def add_pair(time_value: Any, price_value: Any, price_key: str | None = None) -> None:
+    def add_pair(time_value: Any, price_value: Any) -> None:
         dt = _parse_time(time_value)
         price = _as_float(price_value)
-        if dt is None or price is None:
-            return
-
-        # Explicit ct fields are already normalized. price_per_kwh follows
-        # the entity's unit (EUR/kWh in the reference installation).
-        if price_key not in ("price_ct_kwh", "ct_kwh") and source_is_eur:
-            price *= 100.0
-        results.append((dt, price))
+        if dt is not None and price is not None:
+            results.append((dt, price))
 
     def visit(value: Any) -> None:
         if isinstance(value, dict):
             time_value = next((value.get(k) for k in _TIME_KEYS if value.get(k) is not None), None)
-            price_key = next((k for k in _PRICE_KEYS if value.get(k) is not None), None)
-            if time_value is not None and price_key is not None:
-                add_pair(time_value, value.get(price_key), price_key)
+            price_value = next((value.get(k) for k in _PRICE_KEYS if value.get(k) is not None), None)
+            if time_value is not None and price_value is not None:
+                add_pair(time_value, price_value)
 
+            # Some integrations expose {timestamp: price} dictionaries.
             for key, nested in value.items():
                 if not isinstance(nested, (dict, list, tuple)):
                     parsed_key = _parse_time(key)
                     numeric_value = _as_float(nested)
                     if parsed_key is not None and numeric_value is not None:
-                        if source_is_eur:
-                            numeric_value *= 100.0
                         results.append((parsed_key, numeric_value))
 
+            # Prefer likely series attributes, then recursively inspect others.
             for key in _SERIES_KEYS:
                 nested = value.get(key)
                 if isinstance(nested, (dict, list, tuple)):
@@ -110,25 +98,17 @@ def extract_price_series(attributes: dict[str, Any]) -> list[tuple[datetime, flo
                     visit(nested)
 
         elif isinstance(value, (list, tuple)):
+            # Also support [timestamp, price] pairs.
             if len(value) == 2 and not isinstance(value[0], (dict, list, tuple)):
                 dt = _parse_time(value[0])
                 price = _as_float(value[1])
                 if dt is not None and price is not None:
-                    if source_is_eur:
-                        price *= 100.0
                     results.append((dt, price))
                     return
             for item in value:
                 visit(item)
 
-    # Fast path for the actual EPEX Spot Data format.
-    data = attributes.get("data")
-    if isinstance(data, list):
-        for item in data:
-            if isinstance(item, dict) and item.get("start_time") is not None and item.get("price_per_kwh") is not None:
-                add_pair(item["start_time"], item["price_per_kwh"], "price_per_kwh")
-    else:
-        visit(attributes)
+    visit(attributes)
 
     deduplicated: dict[datetime, float] = {}
     for dt, price in results:

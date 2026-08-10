@@ -1,5 +1,5 @@
 # File: custom_components/solar_energy_controller/coordinator.py
-# Timestamp: 2026-08-10 22:45 CEST
+# Timestamp: 2026-08-10 23:30 CEST
 
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -11,6 +11,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 from .const import *
+from .decision_log import append_decision_log, format_decision
 from .price_parser import future_prices
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,16 +23,16 @@ class SolarEnergyControllerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._store=Store(hass,STORAGE_VERSION,f"{STORAGE_KEY}_{entry.entry_id}"); self._loaded=False
         self.simulation_enabled=True; self.virtual_energy_kwh=None; self.miner_simulated_on=False; self.miner_locked_until=None
         self.accumulation_date=dt_util.now().date().isoformat(); self.accumulation_start=dt_util.now().isoformat(); self.last_update=None
-        self.last_actual_export_energy=None; self.last_actual_import_energy=None; self.metrics=self._fresh_metrics()
+        self.last_actual_export_energy=None; self.last_actual_import_energy=None; self.metrics=self._fresh_metrics(); self.decision_log=[]
     @staticmethod
     def _fresh_metrics():
         return {k:0.0 for k in ("sim_export_kwh","sim_export_revenue_eur","sim_import_kwh","sim_import_cost_eur","sim_self_supply_kwh","sim_self_supply_value_eur","sim_miner_hours","sim_doge","sim_mining_value_eur","actual_export_revenue_eur","actual_import_cost_eur","actual_self_supply_value_eur","actual_miner_hours","actual_doge","actual_mining_value_eur")}
     async def _async_load(self):
         if self._loaded:return
         s=await self._store.async_load() or {}; self.simulation_enabled=bool(s.get("simulation_enabled",True)); self.virtual_energy_kwh=s.get("virtual_energy_kwh"); self.miner_simulated_on=bool(s.get("miner_simulated_on",False))
-        x=s.get("miner_locked_until"); self.miner_locked_until=dt_util.parse_datetime(x) if x else None; self.accumulation_date=s.get("accumulation_date",self.accumulation_date); self.accumulation_start=s.get("accumulation_start",self.accumulation_start); self.metrics.update(s.get("metrics",{})); self._loaded=True
+        x=s.get("miner_locked_until"); self.miner_locked_until=dt_util.parse_datetime(x) if x else None; self.accumulation_date=s.get("accumulation_date",self.accumulation_date); self.accumulation_start=s.get("accumulation_start",self.accumulation_start); self.metrics.update(s.get("metrics",{})); self.decision_log=list(s.get("decision_log",[]))[-192:]; self._loaded=True
     async def async_set_simulation_enabled(self,enabled): self.simulation_enabled=enabled; await self._async_save(); await self.async_request_refresh()
-    async def _async_save(self): await self._store.async_save({"simulation_enabled":self.simulation_enabled,"virtual_energy_kwh":self.virtual_energy_kwh,"miner_simulated_on":self.miner_simulated_on,"miner_locked_until":self.miner_locked_until.isoformat() if self.miner_locked_until else None,"accumulation_date":self.accumulation_date,"accumulation_start":self.accumulation_start,"metrics":self.metrics})
+    async def _async_save(self): await self._store.async_save({"simulation_enabled":self.simulation_enabled,"virtual_energy_kwh":self.virtual_energy_kwh,"miner_simulated_on":self.miner_simulated_on,"miner_locked_until":self.miner_locked_until.isoformat() if self.miner_locked_until else None,"accumulation_date":self.accumulation_date,"accumulation_start":self.accumulation_start,"metrics":self.metrics,"decision_log":self.decision_log})
     def _state_float(self,e):
         if not e:return None
         s=self.hass.states.get(e)
@@ -55,8 +56,7 @@ class SolarEnergyControllerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         s=self.hass.states.get(e) if e else None
         if not s:return None
         d=dt_util.parse_datetime(s.state); return dt_util.as_local(d) if d else None
-    def _forecast(self):
-        return {"today":self._sum_energy(self.cfg[CONF_FORECAST_TODAY_1],self.cfg[CONF_FORECAST_TODAY_2]),"remaining":self._sum_energy(self.cfg[CONF_FORECAST_REMAINING_1],self.cfg[CONF_FORECAST_REMAINING_2]),"tomorrow":self._sum_energy(self.cfg[CONF_FORECAST_TOMORROW_1],self.cfg[CONF_FORECAST_TOMORROW_2]),"next_hour":self._sum_energy(self.cfg[CONF_FORECAST_NEXT_HOUR_1],self.cfg[CONF_FORECAST_NEXT_HOUR_2]),"peak_tomorrow":self._timestamp(self.cfg[CONF_FORECAST_PEAK_TOMORROW_1]) or self._timestamp(self.cfg[CONF_FORECAST_PEAK_TOMORROW_2])}
+    def _forecast(self): return {"today":self._sum_energy(self.cfg[CONF_FORECAST_TODAY_1],self.cfg[CONF_FORECAST_TODAY_2]),"remaining":self._sum_energy(self.cfg[CONF_FORECAST_REMAINING_1],self.cfg[CONF_FORECAST_REMAINING_2]),"tomorrow":self._sum_energy(self.cfg[CONF_FORECAST_TOMORROW_1],self.cfg[CONF_FORECAST_TOMORROW_2]),"next_hour":self._sum_energy(self.cfg[CONF_FORECAST_NEXT_HOUR_1],self.cfg[CONF_FORECAST_NEXT_HOUR_2]),"peak_tomorrow":self._timestamp(self.cfg[CONF_FORECAST_PEAK_TOMORROW_1]) or self._timestamp(self.cfg[CONF_FORECAST_PEAK_TOMORROW_2])}
     def _actual_miner_on(self):
         s=self.hass.states.get(self.cfg[CONF_MINER_SWITCH]) if self.cfg[CONF_MINER_SWITCH] else None; return bool(s and s.state=="on")
     def _current_export_price_ct(self):
@@ -76,14 +76,11 @@ class SolarEnergyControllerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         elif current<=p50 and spread>=3: base=75; why="current price is below the future median"
         elif current<p75 and spread>=1.5: base=55; why="current price is moderately cheap"
         else: base=minimum; why="current price offers no strong storage advantage"
-        # PV forecast modifies the economic reserve. With a weak next day, preserve energy;
-        # with a strong next day, create headroom so cheap solar is not displaced.
         if tomorrow<=25: pv_adj=20; pvwhy=f"weak tomorrow forecast ({tomorrow:.1f} kWh)"
         elif tomorrow<=45: pv_adj=10; pvwhy=f"moderate tomorrow forecast ({tomorrow:.1f} kWh)"
         elif tomorrow>=75: pv_adj=-20; pvwhy=f"strong tomorrow forecast ({tomorrow:.1f} kWh)"
         elif tomorrow>=55: pv_adj=-10; pvwhy=f"good tomorrow forecast ({tomorrow:.1f} kWh)"
         else: pv_adj=0; pvwhy=f"neutral tomorrow forecast ({tomorrow:.1f} kWh)"
-        # Remaining production today can still refill the battery, so additional reserve is less necessary.
         if remaining>=15: pv_adj-=10; pvwhy+=f", plus {remaining:.1f} kWh remaining today"
         target=max(minimum,min(95.0,base+pv_adj)); return target,f"{why}; {pvwhy}. Future peak {peak:.2f} ct/kWh."
     def _miner_should_start(self,now,price,surplus,series):
@@ -132,4 +129,6 @@ class SolarEnergyControllerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             elif self.virtual_energy_kwh<target_energy and surplus>0:rec="CHARGE_PRIORITY";reason=f"Target SOC {target:.0f}%. {target_reason}"
             elif surplus>0:rec="EXPORT_PRIORITY";reason=f"Reserve satisfied. {target_reason}"
             else:rec="HOUSE_RESERVE";reason=f"No PV surplus; battery may serve house load down to {minsoc:.0f}%. {target_reason}"
-        data={**self.metrics,"simulation_enabled":self.simulation_enabled,"recommendation":rec,"reason":reason,"target_reason":target_reason,"virtual_soc":self.virtual_energy_kwh/cap*100,"target_soc":target,"actual_soc":actual_soc,"pv_kw":pv,"house_kw":house,"sim_export_kw":exp,"sim_import_kw":imp,"sim_battery_charge_kw":chg,"sim_battery_discharge_kw":dis,"miner_simulated_on":self.miner_simulated_on,"miner_locked_until":self.miner_locked_until.isoformat() if self.miner_locked_until else None,"miner_break_even_ct":self._miner_break_even_ct(),"export_price_ct":price,"import_price_eur":import_eur,"future_price_points":len(series),"future_min_ct":fmin,"future_max_ct":fmax,"low_quartile_ct":low,"forecast_today_kwh":fc["today"],"forecast_remaining_today_kwh":fc["remaining"],"forecast_tomorrow_kwh":fc["tomorrow"],"forecast_next_hour_kwh":fc["next_hour"],"forecast_peak_tomorrow":fc["peak_tomorrow"].isoformat() if fc["peak_tomorrow"] else None,"simulated_benefit_eur":sim,"actual_benefit_eur":actual,"advantage_eur":sim-actual,"accumulation_start":self.accumulation_start};await self._async_save();return data
+        log_entry={"timestamp":now.isoformat(),"time_local":now.strftime("%H:%M"),"recommendation":rec,"reason":reason,"pv_kw":round(pv,3),"house_kw":round(house,3),"actual_soc":None if actual_soc is None else round(actual_soc,1),"virtual_soc":round(self.virtual_energy_kwh/cap*100,1),"target_soc":round(target,1),"export_price_ct":round(price,3),"import_price_eur":round(import_eur,4),"future_min_ct":fmin,"future_max_ct":fmax,"forecast_remaining_kwh":round(fc["remaining"],2),"forecast_tomorrow_kwh":round(fc["tomorrow"],2),"miner_on":self.miner_simulated_on,"miner_locked_until":self.miner_locked_until.isoformat() if self.miner_locked_until else None,"sim_export_kw":round(exp,3),"sim_import_kw":round(imp,3),"sim_battery_charge_kw":round(chg,3),"sim_battery_discharge_kw":round(dis,3),"simulated_net_benefit_eur":round(sim,3),"observed_net_benefit_eur":round(actual,3),"advantage_eur":round(sim-actual,3)}
+        self.decision_log=append_decision_log(self.decision_log,log_entry)
+        data={**self.metrics,"simulation_enabled":self.simulation_enabled,"recommendation":rec,"reason":reason,"target_reason":target_reason,"virtual_soc":self.virtual_energy_kwh/cap*100,"target_soc":target,"actual_soc":actual_soc,"pv_kw":pv,"house_kw":house,"sim_export_kw":exp,"sim_import_kw":imp,"sim_battery_charge_kw":chg,"sim_battery_discharge_kw":dis,"miner_simulated_on":self.miner_simulated_on,"miner_locked_until":self.miner_locked_until.isoformat() if self.miner_locked_until else None,"miner_break_even_ct":self._miner_break_even_ct(),"export_price_ct":price,"import_price_eur":import_eur,"future_price_points":len(series),"future_min_ct":fmin,"future_max_ct":fmax,"low_quartile_ct":low,"forecast_today_kwh":fc["today"],"forecast_remaining_today_kwh":fc["remaining"],"forecast_tomorrow_kwh":fc["tomorrow"],"forecast_next_hour_kwh":fc["next_hour"],"forecast_peak_tomorrow":fc["peak_tomorrow"].isoformat() if fc["peak_tomorrow"] else None,"simulated_benefit_eur":sim,"actual_benefit_eur":actual,"advantage_eur":sim-actual,"accumulation_start":self.accumulation_start,"last_decision":format_decision(log_entry),"decision_log":self.decision_log,"decision_log_count":len(self.decision_log)};await self._async_save();return data

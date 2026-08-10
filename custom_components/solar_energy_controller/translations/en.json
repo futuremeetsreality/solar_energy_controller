@@ -1,0 +1,67 @@
+{
+  "title": "Solar Energy Controller",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Entities",
+        "description": "Assign the Home Assistant entities for PV, house load, grid and battery.",
+        "data": {
+          "pv_power_entity": "Total PV power",
+          "pv_energy_today_entity": "PV energy today",
+          "house_load_entity": "House load",
+          "grid_export_power_entity": "Grid export power",
+          "grid_import_power_entity": "Grid import power",
+          "grid_export_energy_today_entity": "Grid export energy today",
+          "grid_import_energy_today_entity": "Grid import energy today",
+          "battery_soc_entity": "Battery SOC",
+          "battery_power_entity": "Battery power"
+        }
+      },
+      "battery": {
+        "title": "Battery",
+        "description": "Technical limits for the virtual battery.",
+        "data": {
+          "battery_capacity_kwh": "Battery capacity",
+          "battery_min_soc": "Absolute minimum SOC",
+          "battery_max_charge_kw": "Maximum charge power",
+          "battery_max_discharge_kw": "Maximum discharge power",
+          "battery_charge_efficiency": "Charge efficiency",
+          "battery_discharge_efficiency": "Discharge efficiency"
+        }
+      },
+      "prices": {
+        "title": "Electricity prices",
+        "description": "The EPEX entity is expected in ct/kWh. Effective export and total import price entities are optional; the fallback import value is used otherwise.",
+        "data": {
+          "epex_price_entity": "EPEX price / time series",
+          "effective_export_price_entity": "Effective export price (optional)",
+          "import_total_price_entity": "Total import price (optional)",
+          "import_fallback_eur_kwh": "Fallback import price"
+        }
+      },
+      "miner": {
+        "title": "Miner",
+        "description": "0.1.0 values DOGE only. LTC is intentionally ignored.",
+        "data": {
+          "miner_switch_entity": "Miner switch",
+          "miner_power_entity": "Miner power",
+          "miner_nominal_power_kw": "Total nominal miner power",
+          "miner_min_runtime_min": "Minimum runtime",
+          "doge_per_day": "DOGE per 24 hours",
+          "doge_target_eur": "DOGE target value"
+        }
+      },
+      "controller": {
+        "title": "Controller",
+        "description": "Version 0.1.0 is simulation-only and never writes to devices.",
+        "data": {
+          "interval_min": "Calculation interval",
+          "horizon_h": "Planning horizon"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Solar Energy Controller is already configured."
+    }
+  }
+}

@@ -1,5 +1,5 @@
 # File: custom_components/solar_energy_controller/config_flow.py
-# Timestamp: 2026-08-11 00:24 CEST
+# Timestamp: 2026-08-10 22:27 CEST
 
 from __future__ import annotations
 from typing import Any
@@ -43,9 +43,7 @@ class SolarEnergyControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._data.update(user_input); return await self.async_step_forecast()
         return self.async_show_form(step_id="prices",data_schema=vol.Schema({
-            _text(CONF_EPEX_CURRENT_PRICE):TextSelector(),
-            _text(CONF_EPEX_PRICE):TextSelector(),
-            vol.Optional(CONF_EFFECTIVE_EXPORT_PRICE,default=""):TextSelector(),
+            _text(CONF_EPEX_PRICE):TextSelector(),vol.Optional(CONF_EFFECTIVE_EXPORT_PRICE,default=""):TextSelector(),
             vol.Optional(CONF_IMPORT_TOTAL_PRICE,default=""):TextSelector(),
             vol.Required(CONF_IMPORT_FALLBACK_EUR_KWH,default=.348):NumberSelector(NumberSelectorConfig(min=0,max=2,step=.001,unit_of_measurement="€/kWh"))}))
 

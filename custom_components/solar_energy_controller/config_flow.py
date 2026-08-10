@@ -8,7 +8,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers.selector import NumberSelector, NumberSelectorConfig, TextSelector
 
 from .const import (
@@ -56,7 +56,7 @@ class SolarEnergyControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_battery()
@@ -76,7 +76,7 @@ class SolarEnergyControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="user", data_schema=schema)
 
-    async def async_step_battery(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_battery(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_prices()
@@ -93,7 +93,7 @@ class SolarEnergyControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="battery", data_schema=schema)
 
-    async def async_step_prices(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_prices(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_miner()
@@ -108,7 +108,7 @@ class SolarEnergyControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="prices", data_schema=schema)
 
-    async def async_step_miner(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_miner(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_controller()
@@ -125,7 +125,7 @@ class SolarEnergyControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="miner", data_schema=schema)
 
-    async def async_step_controller(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_controller(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
             await self.async_set_unique_id(DOMAIN)

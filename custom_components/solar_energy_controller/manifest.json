@@ -1,7 +1,7 @@
 {
   "domain": "solar_energy_controller",
   "name": "Solar Energy Controller",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "documentation": "https://github.com/futuremeetsreality/solar_energy_controller",
   "issue_tracker": "https://github.com/futuremeetsreality/solar_energy_controller/issues",
   "codeowners": ["@futuremeetsreality"],

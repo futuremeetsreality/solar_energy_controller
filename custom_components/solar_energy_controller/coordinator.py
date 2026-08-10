@@ -1,5 +1,5 @@
 # File: custom_components/solar_energy_controller/coordinator.py
-# Timestamp: 2026-08-11 00:30 CEST
+# Timestamp: 2026-08-10 21:58 CEST
 
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -55,6 +55,23 @@ class SolarEnergyControllerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if fallback and self.hass.states.get(fallback) is not None:
             return fallback
         return configured or fallback
+
+    def _forecast_entity(self, key: str) -> str:
+        """Resolve a Forecast.Solar source without allowing self-references.
+
+        Earlier config entries can contain one of this integration's own
+        generated forecast sensors. That creates a circular read and therefore
+        permanent 0 kWh values. For the known Forecast.Solar inputs, prefer the
+        actual default source entities whenever they exist.
+        """
+        fallback = str(DEFAULTS.get(key, "") or "").strip()
+        if fallback and self.hass.states.get(fallback) is not None:
+            return fallback
+
+        configured = str(self.cfg.get(key, "") or "").strip()
+        if configured and "solar_energy_controller" not in configured and self.hass.states.get(configured) is not None:
+            return configured
+        return fallback or configured
 
     async def _async_load(self):
         if self._loaded:
@@ -136,11 +153,11 @@ class SolarEnergyControllerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _forecast(self):
         return {
-            "today": self._sum_energy(self._entity(CONF_FORECAST_TODAY_1), self._entity(CONF_FORECAST_TODAY_2)),
-            "remaining": self._sum_energy(self._entity(CONF_FORECAST_REMAINING_1), self._entity(CONF_FORECAST_REMAINING_2)),
-            "tomorrow": self._sum_energy(self._entity(CONF_FORECAST_TOMORROW_1), self._entity(CONF_FORECAST_TOMORROW_2)),
-            "next_hour": self._sum_energy(self._entity(CONF_FORECAST_NEXT_HOUR_1), self._entity(CONF_FORECAST_NEXT_HOUR_2)),
-            "peak_tomorrow": self._timestamp(self._entity(CONF_FORECAST_PEAK_TOMORROW_1)) or self._timestamp(self._entity(CONF_FORECAST_PEAK_TOMORROW_2)),
+            "today": self._sum_energy(self._forecast_entity(CONF_FORECAST_TODAY_1), self._forecast_entity(CONF_FORECAST_TODAY_2)),
+            "remaining": self._sum_energy(self._forecast_entity(CONF_FORECAST_REMAINING_1), self._forecast_entity(CONF_FORECAST_REMAINING_2)),
+            "tomorrow": self._sum_energy(self._forecast_entity(CONF_FORECAST_TOMORROW_1), self._forecast_entity(CONF_FORECAST_TOMORROW_2)),
+            "next_hour": self._sum_energy(self._forecast_entity(CONF_FORECAST_NEXT_HOUR_1), self._forecast_entity(CONF_FORECAST_NEXT_HOUR_2)),
+            "peak_tomorrow": self._timestamp(self._forecast_entity(CONF_FORECAST_PEAK_TOMORROW_1)) or self._timestamp(self._forecast_entity(CONF_FORECAST_PEAK_TOMORROW_2)),
         }
 
     def _actual_miner_on(self):
@@ -361,8 +378,10 @@ class SolarEnergyControllerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "decision_log": self.decision_log, "decision_log_count": len(self.decision_log),
             "resolved_epex_current_entity": self._entity(CONF_EPEX_CURRENT_PRICE),
             "resolved_epex_series_entity": self._entity(CONF_EPEX_PRICE),
-            "resolved_forecast_tomorrow_1": self._entity(CONF_FORECAST_TOMORROW_1),
-            "resolved_forecast_tomorrow_2": self._entity(CONF_FORECAST_TOMORROW_2),
+            "resolved_forecast_today_1": self._forecast_entity(CONF_FORECAST_TODAY_1),
+            "resolved_forecast_today_2": self._forecast_entity(CONF_FORECAST_TODAY_2),
+            "resolved_forecast_tomorrow_1": self._forecast_entity(CONF_FORECAST_TOMORROW_1),
+            "resolved_forecast_tomorrow_2": self._forecast_entity(CONF_FORECAST_TOMORROW_2),
         }
         await self._async_save()
         return data

@@ -1,0 +1,11 @@
+{
+  "domain": "solar_energy_controller",
+  "name": "Solar Energy Controller",
+  "version": "0.1.0",
+  "documentation": "https://github.com/futuremeetsreality/solar_energy_controller",
+  "issue_tracker": "https://github.com/futuremeetsreality/solar_energy_controller/issues",
+  "codeowners": ["@futuremeetsreality"],
+  "config_flow": true,
+  "integration_type": "service",
+  "iot_class": "local_polling"
+}

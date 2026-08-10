@@ -1,10 +1,9 @@
 # File: custom_components/solar_energy_controller/const.py
-# Timestamp: 2026-08-10 22:37 CEST
+# Timestamp: 2026-08-10 22:25 CEST
 
 from __future__ import annotations
 
 DOMAIN = "solar_energy_controller"
-BUILD_VERSION = "0.1.8"
 PLATFORMS = ["sensor", "switch"]
 
 CONF_PV_POWER = "pv_power_entity"
@@ -16,7 +15,6 @@ CONF_GRID_EXPORT_ENERGY_TODAY = "grid_export_energy_today_entity"
 CONF_GRID_IMPORT_ENERGY_TODAY = "grid_import_energy_today_entity"
 CONF_BATTERY_SOC = "battery_soc_entity"
 CONF_BATTERY_POWER = "battery_power_entity"
-CONF_EPEX_CURRENT_PRICE = "epex_current_price_entity"
 CONF_EPEX_PRICE = "epex_price_entity"
 CONF_EFFECTIVE_EXPORT_PRICE = "effective_export_price_entity"
 CONF_IMPORT_TOTAL_PRICE = "import_total_price_entity"
@@ -58,7 +56,6 @@ DEFAULTS = {
     CONF_GRID_IMPORT_ENERGY_TODAY: "sensor.solax_inverter_today_s_import_energy",
     CONF_BATTERY_SOC: "sensor.solax_inverter_battery_1_capacity",
     CONF_BATTERY_POWER: "sensor.solax_inverter_battery_1_power_charge",
-    CONF_EPEX_CURRENT_PRICE: "sensor.epex_spot_data_market_price",
     CONF_EPEX_PRICE: "sensor.epex_spot_data_market_price",
     CONF_EFFECTIVE_EXPORT_PRICE: "",
     CONF_IMPORT_TOTAL_PRICE: "",

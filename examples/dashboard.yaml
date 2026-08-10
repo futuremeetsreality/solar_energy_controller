@@ -1,5 +1,5 @@
 # File: examples/dashboard.yaml
-# Timestamp: 2026-08-10 23:50 CEST
+# Timestamp: 2026-08-10 23:58 CEST
 # Solar Energy Controller 0.1.4
 # COMPLETE Home Assistant dashboard YAML.
 # Paste into the Raw configuration editor of a dedicated dashboard.
@@ -36,7 +36,7 @@ views:
             title: Letzte Simulationsentscheidung
             show_header_toggle: false
             entities:
-              - entity: sensor.solar_energy_controller_simulation_decision_log
+              - entity: sensor.simulation_solar_energy_controller_simulation_decision_log
                 name: Entscheidung / SOC / Preis / Miner
 
       - type: grid
@@ -191,7 +191,7 @@ views:
               - entity: sensor.solar_energy_controller_recommended_mode
                 name: Empfehlung
                 secondary_info: last-changed
-              - entity: sensor.solar_energy_controller_simulation_decision_log
+              - entity: sensor.simulation_solar_energy_controller_simulation_decision_log
                 name: Entscheidungsprotokoll
               - entity: sensor.solax_inverter_pv_power_total
                 name: PV Ist

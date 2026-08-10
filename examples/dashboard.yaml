@@ -1,0 +1,117 @@
+# File: examples/dashboard.yaml
+# Timestamp: 2026-08-10 22:32 CEST
+# Solar Energy Controller - simulation dashboard
+# Requires the Solar Energy Controller integration to be configured first.
+
+title: Solar Energy Controller
+views:
+  - title: Simulation
+    path: simulation
+    icon: mdi:solar-power-variant
+    cards:
+      - type: markdown
+        content: |
+          # 🟢 SIMULATION
+          **Keine Gerätesteuerung.** Der Controller beobachtet und berechnet nur einen Schattenbetrieb.
+
+      - type: entities
+        title: Controller
+        show_header_toggle: false
+        entities:
+          - entity: switch.solar_energy_controller_simulation
+            name: Simulation aktiv
+          - entity: sensor.solar_energy_controller_recommended_mode
+            name: Empfehlung
+          - entity: sensor.solar_energy_controller_simulated_battery_soc
+            name: Virtueller SOC
+          - entity: sensor.solar_energy_controller_target_battery_soc
+            name: Ziel-SOC
+          - entity: sensor.solar_energy_controller_effective_export_price
+            name: Exportpreis
+          - entity: sensor.solar_energy_controller_mining_break_even_export_price
+            name: Mining Break-even
+          - entity: sensor.solar_energy_controller_future_minimum_epex_price
+            name: EPEX Minimum voraus
+          - entity: sensor.solar_energy_controller_future_maximum_epex_price
+            name: EPEX Maximum voraus
+
+      - type: glance
+        title: Heute – Simulation gegen Ist
+        columns: 3
+        entities:
+          - entity: sensor.solar_energy_controller_simulated_total_benefit_today
+            name: Simulation
+          - entity: sensor.solar_energy_controller_observed_total_benefit_today
+            name: Ist
+          - entity: sensor.solar_energy_controller_simulation_advantage_today
+            name: Vorteil
+
+      - type: entities
+        title: Simulierte Energieflüsse
+        show_header_toggle: false
+        entities:
+          - entity: sensor.solar_energy_controller_simulated_export_power
+            name: Exportleistung
+          - entity: sensor.solar_energy_controller_simulated_import_power
+            name: Netzbezug
+          - entity: sensor.solar_energy_controller_simulated_battery_charge_power
+            name: Batterieladung
+          - entity: sensor.solar_energy_controller_simulated_battery_discharge_power
+            name: Batterieentladung
+          - entity: sensor.solar_energy_controller_simulated_export_energy_today
+            name: Export heute
+          - entity: sensor.solar_energy_controller_simulated_import_energy_today
+            name: Import heute
+          - entity: sensor.solar_energy_controller_simulated_export_revenue_today
+            name: Exporterlös
+          - entity: sensor.solar_energy_controller_simulated_self_consumption_saving_today
+            name: Eigenverbrauchsersparnis
+
+      - type: entities
+        title: Mining – DOGE only
+        show_header_toggle: false
+        entities:
+          - entity: switch.steckdose_mining
+            name: Miner tatsächlich
+          - entity: sensor.steckdose_mining_power
+            name: Miner Leistung
+          - entity: sensor.solar_energy_controller_simulated_miner_runtime_today
+            name: Simulierte Laufzeit
+          - entity: sensor.solar_energy_controller_simulated_doge_today
+            name: Simulierte DOGE
+          - entity: sensor.solar_energy_controller_simulated_mining_value_today
+            name: Simulierter Miningwert
+
+      - type: entities
+        title: Forecast.Solar – beide MPPT
+        show_header_toggle: false
+        entities:
+          - entity: sensor.energy_production_today
+            name: MPPT1 heute
+          - entity: sensor.energy_production_today_2
+            name: MPPT2 heute
+          - entity: sensor.energy_production_today_remaining
+            name: MPPT1 Rest heute
+          - entity: sensor.energy_production_today_remaining_2
+            name: MPPT2 Rest heute
+          - entity: sensor.energy_production_tomorrow
+            name: MPPT1 morgen
+          - entity: sensor.energy_production_tomorrow_2
+            name: MPPT2 morgen
+          - entity: sensor.energy_next_hour
+            name: MPPT1 nächste Stunde
+          - entity: sensor.energy_next_hour_2
+            name: MPPT2 nächste Stunde
+          - entity: sensor.power_highest_peak_time_tomorrow
+            name: MPPT1 Peak morgen
+          - entity: sensor.power_highest_peak_time_tomorrow_2
+            name: MPPT2 Peak morgen
+
+      - type: history-graph
+        title: Echter vs. virtueller Batterie-SOC
+        hours_to_show: 24
+        entities:
+          - entity: sensor.solax_inverter_battery_1_capacity
+            name: Ist SOC
+          - entity: sensor.solar_energy_controller_simulated_battery_soc
+            name: Simulation SOC

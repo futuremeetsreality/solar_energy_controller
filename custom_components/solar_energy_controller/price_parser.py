@@ -1,5 +1,5 @@
 # File: custom_components/solar_energy_controller/price_parser.py
-# Timestamp: 2026-08-10 21:10 CEST
+# Timestamp: 2026-08-11 07:38 CEST
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def _parse_time(value: Any) -> datetime | None:
     elif isinstance(value, (int, float)):
         try:
             stamp = float(value)
-            if stamp > 10_000_000_000:  # milliseconds since epoch
+            if stamp > 10_000_000_000:
                 stamp /= 1000.0
             dt = datetime.fromtimestamp(stamp, tz=dt_util.UTC)
         except (ValueError, OSError, OverflowError):
@@ -59,28 +59,30 @@ def _as_float(value: Any) -> float | None:
 
 
 def extract_price_series(attributes: dict[str, Any]) -> list[tuple[datetime, float]]:
-    """Extract timestamp/price pairs from common EPEX attribute layouts.
+    """Extract timestamp/price pairs and normalize EPEX values to ct/kWh.
 
-    The source entity in the reference installation contains today + tomorrow
-    quarter-hour values. Prices are kept in their source unit; the controller
-    expects ct/kWh for this EPEX entity.
+    The reference EPEX entity exposes its quarter-hour values in attribute
+    ``data`` using ``price_per_kwh`` in EUR/kWh. Those values are multiplied by
+    100 so the controller consistently receives ct/kWh. Other supported price
+    keys keep their existing value to preserve compatibility with sources that
+    already expose ct/kWh.
     """
     results: list[tuple[datetime, float]] = []
 
-    def add_pair(time_value: Any, price_value: Any) -> None:
+    def add_pair(time_value: Any, price_value: Any, *, multiplier: float = 1.0) -> None:
         dt = _parse_time(time_value)
         price = _as_float(price_value)
         if dt is not None and price is not None:
-            results.append((dt, price))
+            results.append((dt, price * multiplier))
 
     def visit(value: Any) -> None:
         if isinstance(value, dict):
             time_value = next((value.get(k) for k in _TIME_KEYS if value.get(k) is not None), None)
-            price_value = next((value.get(k) for k in _PRICE_KEYS if value.get(k) is not None), None)
-            if time_value is not None and price_value is not None:
-                add_pair(time_value, price_value)
+            price_key = next((k for k in _PRICE_KEYS if value.get(k) is not None), None)
+            if time_value is not None and price_key is not None:
+                multiplier = 100.0 if price_key == "price_per_kwh" else 1.0
+                add_pair(time_value, value.get(price_key), multiplier=multiplier)
 
-            # Some integrations expose {timestamp: price} dictionaries.
             for key, nested in value.items():
                 if not isinstance(nested, (dict, list, tuple)):
                     parsed_key = _parse_time(key)
@@ -88,7 +90,6 @@ def extract_price_series(attributes: dict[str, Any]) -> list[tuple[datetime, flo
                     if parsed_key is not None and numeric_value is not None:
                         results.append((parsed_key, numeric_value))
 
-            # Prefer likely series attributes, then recursively inspect others.
             for key in _SERIES_KEYS:
                 nested = value.get(key)
                 if isinstance(nested, (dict, list, tuple)):
@@ -98,7 +99,6 @@ def extract_price_series(attributes: dict[str, Any]) -> list[tuple[datetime, flo
                     visit(nested)
 
         elif isinstance(value, (list, tuple)):
-            # Also support [timestamp, price] pairs.
             if len(value) == 2 and not isinstance(value[0], (dict, list, tuple)):
                 dt = _parse_time(value[0])
                 price = _as_float(value[1])
@@ -119,7 +119,7 @@ def extract_price_series(attributes: dict[str, Any]) -> list[tuple[datetime, flo
 def future_prices(
     attributes: dict[str, Any], now: datetime, horizon_hours: int
 ) -> list[tuple[datetime, float]]:
-    """Return price points from the current quarter through the horizon."""
+    """Return price points in ct/kWh from the current quarter through the horizon."""
     now_local = dt_util.as_local(now)
     end_ts = now_local.timestamp() + horizon_hours * 3600
     return [

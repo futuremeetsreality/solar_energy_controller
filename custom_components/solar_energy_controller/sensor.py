@@ -1,5 +1,5 @@
 # File: custom_components/solar_energy_controller/sensor.py
-# Timestamp: 2026-08-10 23:35 CEST
+# Timestamp: 2026-08-11 07:38 CEST
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any,Callable
@@ -46,7 +46,7 @@ async def async_setup_entry(hass:HomeAssistant,entry:ConfigEntry,async_add_entit
 class SECSensor(CoordinatorEntity[SolarEnergyControllerCoordinator],SensorEntity):
     _attr_has_entity_name=True
     def __init__(self,c,entry,description):
-        super().__init__(c);self.entity_description=description;self._attr_unique_id=f"{entry.entry_id}_{description.key}";self._attr_device_info=DeviceInfo(identifiers={(DOMAIN,entry.entry_id)},name="Solar Energy Controller",manufacturer="futuremeetsreality",model="Simulation Controller",sw_version="0.1.9")
+        super().__init__(c);self.entity_description=description;self._attr_unique_id=f"{entry.entry_id}_{description.key}";self._attr_device_info=DeviceInfo(identifiers={(DOMAIN,entry.entry_id)},name="Solar Energy Controller",manufacturer="futuremeetsreality",model="Simulation Controller",sw_version="0.1.10")
     @property
     def native_value(self):return self.entity_description.value_fn(self.coordinator.data or {})
     @property
